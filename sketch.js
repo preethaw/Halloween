@@ -1,107 +1,159 @@
 
 var zombie , zombie_running,zombie_collided;
-var weapon , obstacle, obstacleImage;
+var weapon , obstacle, obstacleImage, batImage;
 var ground;
 var weaponGroup, obstacleGroup;
 var score=0;
-var survivalTime=0;
+var score=0;
 var play=1;
 var end=0;
 var gameState=play;
 var restart,restartIma;
 var gameover,gameoverIma;
+var bFlag = false;
 
 function preload()
 {
   
-  zombie_running = loadAnimation("sprite_0.png","sprite_1.png","sprite_2.png","sprite_3.png");
-  zombie_collided=loadAnimation("sprite_0.png");
+  jumpSound = loadSound("assets/sounds/jump.wav");
+  collidedSound = loadSound("assets/sounds/collided.wav");
+  coinSound = loadSound("assets/sounds/coin.wav");
   
+  bgWhite = loadImage("assets/bgwhite.png");
+  backgroundImg = loadImage("assets/bg.png");
+  groundImg = loadImage("assets/ground.png");
   
-  obstaceImage = loadImage("obstacle.png");
-  weapon1 = loadImage("weapon1.png");
-  weapon2 = loadImage("weapon2.png");
-  weapon3 = loadImage("weapon3.png");
-  weapon4 = loadImage("weapon4.png");
-  bgImage = loadImage("bg2.jpg");
-  restartIma=loadImage("restart.png");
-  gameoverIma=loadImage("gameover.png");
+  trex_running = loadAnimation("assets/trex1.png","assets/trex3.png","assets/trex4.png"); 
+  trex_collided = loadAnimation("assets/trex_collided.png"); 
+  zombie_running = loadAnimation("assets/Zombie-01.png","assets/Zombie-02.png","assets/Zombie-03.png","assets/Zombie-04.png"); 
+  zombie_jumping = loadAnimation("assets/Zombie-06.png","assets/Zombie-07.png","assets/Zombie-08.png","assets/Zombie-07.png");
+  zombie_collided = loadAnimation("assets/Zombie-10.png");
+  
+  groundImage = loadImage("assets/ground.png");
+  
+    
+  obstacle1 = loadImage("assets/obstacle1.png");
+  obstacle2 = loadImage("assets/obstacle2.png");
+  obstacle3 = loadImage("assets/obstacle3.png");
+  obstacle4 = loadImage("assets/obstacle4.png");
+  //obstacle5 = loadImage("assets/obstacle5.png");
+  
+
+  coin1 = loadImage("assets/coin1.png");
+  coin2 = loadImage("assets/coin2.png");
+  
+  batImage = loadImage("assets/bat.png");
+
+  gameoverImg = loadImage("assets/gameOver.png");
+  restartImg = loadImage("assets/restart.png");
+
 }
 
 
 
 function setup() 
 {
-  createCanvas(windowWidth, windowHeight);
+  createCanvas(600, 200);
 
-  bg=createSprite(width/2,height/2);  
-  bg.addImage("bgImage",bgImage);
-  bg.velocityX = -1;
-  bg.scale = 1;
+  bg=createSprite(300,100);  
+  bg.addImage("bgWhite",bgWhite);
+  bg.addImage("bgImage",backgroundImg);
+  bg.velocityX = -4;
+  bg.scale = 0.9;
 
   
   
-  zombie=createSprite(50,height-30,20,40);
+  zombie=createSprite(50,10);
+  zombie.addAnimation("trex_running",trex_running); 
+  zombie.addAnimation("trex_collided",trex_collided); 
+
   zombie.addAnimation("running",zombie_running);
+  zombie.addAnimation("jumping",zombie_jumping);
   zombie.addAnimation("collided",zombie_collided);
+  
+  
   zombie.scale=0.5;
-  
-  ground=createSprite(width/2,height-10,width,25);  
-  ground.shapeColour="black";
-  ground.visible = false;
+  zombie.setCollider("rectangle",0,0,40,150);
 
-  
+
+  ground=createSprite(300,185,600,10);  
+  ground.scale = 0.5;
+//  ground.debug = true;
+  ground.addImage("ground",groundImg);
+
+  invGround=createSprite(300,198,600,5);  
+  invGround.visible = false;
+
+ 
   obstacleGroup = createGroup();
   weaponGroup= createGroup();
   
-  gameover=createSprite(width/2,height/2- 50);
-  gameover.addImage("gameover",gameoverIma);
+  gameover=createSprite(300,70);
+  gameover.addImage("gameover",gameoverImg);
   gameover.visible=false;
+  gameover.scale = 0.7;
   
-  restart=createSprite(width/2,height/2+50);
-  restart.addImage("restart",restartIma);
-  restart.scale=0.2;
+  restart=createSprite(300,120);
+  restart.addImage("restart",restartImg);
+  restart.scale=0.7;
   restart.visible=false;
 }
 
 
 function draw() 
 {
-  background(0);
+  background(255);
   
   if(gameState===play)
     {
       ground.velocityX = -6;
-  
+      if(bFlag){
+        zombie.changeAnimation("running",zombie_running);
+      }
+      else{
+        zombie.changeAnimation("trex_running",trex_running);
+      }
       if (ground.x < 0)
         {
-          ground.x = width/2;
-          bg.x = width/2;
+          ground.x = ground.width/2;
+          bg.x = ground.width/2;
         }
-      
-      if (keyDown("space") && zombie.y >= height-120)
+        
+      if (keyDown("space") && zombie.y >= 155)
         {
-          console.log("zombie jumping");
+        
           zombie.velocityY=-15;
+          jumpSound.play();
+          
         }
         zombie.velocityY=zombie.velocityY+0.8;
-        zombie.collide(ground);
+        //zombie.collide(invGround);
       
       spawnObstacles();
       spawnWeapon();
+      spawnBats();
       
       if(zombie.isTouching(weaponGroup))
         {
-          score=score+10;
-          zombie.scale = zombie.scale + 0.1;
-          weaponGroup.destroyEach();
-          survivalTime = survivalTime + 1;
+         // zombie.scale = zombie.scale + 0.1;
+          for (var i = 0; i < weaponGroup.length; i++) {
+            if (weaponGroup.get(i).isTouching(zombie)) {
+                weaponGroup.get(i).destroy();
+                score = score + 1;
+                coinSound.play();
+            }
+
+        }
+
         }
   
       if(zombie.isTouching(obstacleGroup))
         {
           gameState=end;
           bg.velocityX=0;
+          ground.velocityX=0;
+          collidedSound.play();
+         
         }
       
       //console.log(zombie.y);
@@ -111,10 +163,10 @@ function draw()
   else if(gameState===end)
     {
       obstacleGroup.setVelocityXEach(0);
-      weaponGroup.setVelocityXEach(0);
+      weaponGroup.destroyEach();
       
       obstacleGroup.setLifetimeEach(-1);
-      weaponGroup.setLifetimeEach(-1);
+    
       
       ground.velocityX=0;
       bg.velocityX=0;
@@ -122,8 +174,13 @@ function draw()
       
       gameover.visible=true;
       restart.visible=true;
-      
-      zombie.changeAnimation("collided",zombie_collided);
+      if(bFlag){
+        zombie.changeAnimation("collided",zombie_collided);
+      }
+      else{
+        zombie.changeAnimation("trex_collided",trex_collided);
+      }
+     
       
       if(mousePressedOver(restart)) 
       {
@@ -131,31 +188,48 @@ function draw()
       }
     }
   
-    zombie.collide(ground); 
+    zombie.collide(invGround); 
   
   drawSprites();
   
   
   
   stroke="white";
-  textSize(20);
-  fill("white");
+  textSize(15);
+  fill("black");
   
-  text("Score : "+survivalTime,width-100,25);
+  text("Score : "+score,500,25);
+  text("Press b and c  for Halloween Treat!! ",50,25);
+  
 }
 
 function spawnObstacles()
 {
  if (frameCount % 300 === 0)
  {
-    obstacle = createSprite(width,height-50,10,40);
+    obstacle = createSprite(600,165,10,40);
     obstacle.velocityX = -6;
-    obstacle.addImage("rock",obstaceImage);
+    //generate random obstacles
+    var rand = Math.round(random(1,4));
+    switch(rand) {
+      case 1: obstacle.addImage(obstacle1);
+              break;
+      case 2: obstacle.addImage(obstacle2);
+              break;
+      case 3: obstacle.addImage(obstacle3);
+              break;
+      case 4: obstacle.addImage(obstacle4);
+              break;
+      default: 
+            obstacle.addImage(obstacle4);
+            break;
+    }
             
-    obstacle.scale = 0.5;
+    obstacle.scale = 0.2;
+    //obstacle.debug= true;
     obstacle.lifetime = 300;
-    obstacle.setCollider("circle",0,0,180);
-   
+    obstacle.setCollider("rectangle",0,0,30,180);
+    
     obstacleGroup.add(obstacle);
  }
 }
@@ -163,26 +237,36 @@ function spawnObstacles()
 function spawnWeapon() 
 {
   if (frameCount % 90 === 0) {
-    weapon = createSprite(width,Math.round(random(100,height-200)),40,10);
+    weapon = createSprite(600,Math.round(random(50,100)),40,10);
     
     weapon.velocityX = -6;
     weapon.lifeTime=300;
 
     //generate random obstacles
-    var rand = Math.round(random(1,4));
+    var rand = Math.round(random(1,2));
     switch(rand) {
-      case 1: weapon.addImage(weapon1);
+      case 1: weapon.addImage(coin1);
               break;
-      case 2: weapon.addImage(weapon2);
-              break;
-      case 3: weapon.addImage(weapon3);
-              break;
-      case 4: weapon.addImage(weapon4);
+      case 2: weapon.addImage(coin2);
               break;
       default: break;
     }
-    weapon.scale = 0.3;
+    weapon.scale = 0.05;
     weaponGroup.add(weapon);
+  }
+}
+
+function spawnBats() 
+{
+  if (frameCount % 150 === 0) {
+    bat = createSprite(600,Math.round(random(10,100)),40,10);
+    
+    bat.velocityX = -4;
+    bat.lifeTime=300;
+    bat.addImage(batImage);
+    
+    bat.scale = 0.05;
+   
   }
 }
 
@@ -193,9 +277,28 @@ function reset()
   gameover.visible=false;
   restart.visible=false;
   score=0;
-  zombie.changeAnimation("running",zombie_running);
+  
   obstacleGroup.destroyEach();
   weaponGroup.destroyEach();
   bg.velocityX = -2;
+  ground.velocityX = -2;
+
+  if(bFlag){
+    zombie.changeAnimation("collided",zombie_collided);
+  }
+  else{
+    zombie.changeAnimation("trex_collided",trex_collided);
+  }
 }
 
+
+
+function keyPressed(){
+  if(keyCode === 66){
+    zombie.changeAnimation("running", zombie_running)
+    bFlag = true;
+  }
+  if(keyCode === 67){
+    bg.changeImage("bgImage",backgroundImg);
+  }
+}
